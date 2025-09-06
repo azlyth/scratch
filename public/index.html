@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conquest - Browser Strategy Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            flex: 1;
+            border-right: 2px solid #4a6fa5;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        #menuScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .menu-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            min-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .button {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        input[type="text"] {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .player-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 5px 0;
+        }
+
+        .player-red {
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .player-blue {
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .current-turn {
+            background: rgba(255, 255, 255, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .game-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .small-button {
+            padding: 8px 16px;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .room-code {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            letter-spacing: 2px;
+        }
+
+        .waiting-message {
+            text-align: center;
+            font-size: 1.2em;
+            opacity: 0.8;
+            animation: pulse 2s infinite;
+        }
+
+        #gameStatus {
+            font-size: 1.1em;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .status-waiting {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .status-playing {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .status-finished {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="menuScreen">
+        <div class="menu-card">
+            <h1>CONQUEST</h1>
+            
+            <!-- Main Menu -->
+            <div id="mainMenu">
+                <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="20">
+                <div>
+                    <button class="button" onclick="createGame()">Create New Game</button>
+                    <button class="button" onclick="showJoinMenu()">Join Game</button>
+                </div>
+            </div>
+
+            <!-- Join Menu -->
+            <div id="joinMenu" class="hidden">
+                <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="8" style="text-transform: uppercase;">
+                <div>
+                    <button class="button" onclick="joinGame()">Join Game</button>
+                    <button class="button" onclick="showMainMenu()">Back</button>
+                </div>
+            </div>
+
+            <!-- Waiting Room -->
+            <div id="waitingRoom" class="hidden">
+                <h2>Game Room</h2>
+                <div class="room-code" id="roomCode"></div>
+                <p>Share this code with your opponent!</p>
+                <div class="waiting-message">Waiting for another player to join...</div>
+                <div id="playersList"></div>
+                <button class="button" onclick="leaveRoom()">Leave Room</button>
+            </div>
+
+            <div id="errorMessage" class="error-message hidden"></div>
+        </div>
+    </div>
+
+    <div id="gameContainer" class="hidden">
+        <div id="gameCanvas"></div>
+        <div id="sidebar">
+            <div id="gameStatus"></div>
+            
+            <div id="playersInfo"></div>
+            
+            <div class="game-controls">
+                <div id="selectedTerritoryInfo" class="hidden">
+                    <h3>Selected Territory</h3>
+                    <p id="territoryDetails"></p>
+                    <div class="action-buttons">
+                        <button class="button small-button" id="attackBtn" onclick="setAction('attack')">Attack</button>
+                        <button class="button small-button" id="moveBtn" onclick="setAction('move')">Move</button>
+                    </div>
+                    <div id="actionControls" class="hidden">
+                        <p id="actionDescription"></p>
+                        <input type="range" id="unitsSlider" min="1" max="1" value="1">
+                        <p>Units: <span id="unitsCount">1</span></p>
+                        <div class="action-buttons">
+                            <button class="button small-button" onclick="executeAction()">Execute</button>
+                            <button class="button small-button" onclick="cancelAction()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="button small-button" id="endTurnBtn" onclick="endTurn()">End Turn</button>
+                    <button class="button small-button" onclick="resign()">Resign</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
